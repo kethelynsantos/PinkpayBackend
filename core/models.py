@@ -2,7 +2,6 @@ from django.db import models
 
 
 class Endereco(models.Model):
-    id = models.AutoField(primary_key=True)
     logradouro = models.CharField(max_length=100)
     bairro = models.CharField(max_length=75)
     cidade = models.CharField(max_length=75)
@@ -18,7 +17,6 @@ class Endereco(models.Model):
 
 
 class Cliente(models.Model):
-    id = models.AutoField(primary_key=True)
     id_endereco = models.ForeignKey(Endereco, on_delete=models.CASCADE)
     razao_social = models.CharField(max_length=100)
     social_fantasia = models.CharField(max_length=100)
@@ -36,7 +34,6 @@ class Cliente(models.Model):
 
 
 class ClientePF(models.Model):
-    id_cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
     cpf = models.CharField(max_length=15)
     rg = models.CharField(max_length=15)
 
@@ -49,7 +46,6 @@ class ClientePF(models.Model):
 
 
 class ClientePJ(models.Model):
-    id_cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
     cnpj = models.CharField(max_length=25)
     inscricao_estadual = models.CharField(max_length=30)
     inscricao_municipal = models.CharField(max_length=30)
@@ -63,7 +59,6 @@ class ClientePJ(models.Model):
 
 
 class Contato(models.Model):
-    id = models.AutoField(primary_key=True)
     id_cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
     numero = models.CharField(max_length=15)
     ramal = models.CharField(max_length=25)
@@ -79,7 +74,6 @@ class Contato(models.Model):
 
 
 class Conta(models.Model):
-    id = models.AutoField(primary_key=True)
     agencia = models.CharField(max_length=10)
     numero = models.CharField(max_length=25)
     tipo = models.CharField(max_length=20)
@@ -96,7 +90,6 @@ class Conta(models.Model):
 
 
 class Investimento(models.Model):
-    id = models.AutoField(primary_key=True)
     id_conta = models.ForeignKey(Conta, on_delete=models.CASCADE)
     tipo = models.CharField(max_length=30)
     aporte = models.DecimalField(max_digits=10, decimal_places=2)
@@ -115,7 +108,6 @@ class Investimento(models.Model):
 
 
 class Emprestimo(models.Model):
-    id = models.AutoField(primary_key=True)
     id_conta = models.ForeignKey(Conta, on_delete=models.CASCADE)
     data_solicitacao = models.DateField(auto_now=True)
     valor_solicitado = models.DecimalField(max_digits=10, decimal_places=2)
@@ -134,7 +126,6 @@ class Emprestimo(models.Model):
 
 
 class EmprestimoParcela(models.Model):
-    id = models.AutoField(primary_key=True)
     id_emprestimo = models.ForeignKey(Emprestimo, on_delete=models.CASCADE)
     numero = models.IntegerField()
     data_vencimento = models.DateField()
@@ -151,7 +142,6 @@ class EmprestimoParcela(models.Model):
 
 
 class Cartao(models.Model):
-    id = models.AutoField(primary_key=True)
     id_conta = models.ForeignKey(Conta, on_delete=models.CASCADE)
     numero = models.CharField(max_length=30)
     cvv = models.CharField(max_length=5)
@@ -168,7 +158,6 @@ class Cartao(models.Model):
 
 
 class Movimentacao(models.Model):
-    id = models.AutoField(primary_key=True)
     id_cartao = models.ForeignKey(Cartao, on_delete=models.CASCADE)
     data_hora = models.DateTimeField(auto_now=True)
     operacao = models.CharField(max_length=20)
