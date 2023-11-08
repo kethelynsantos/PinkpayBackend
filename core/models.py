@@ -77,7 +77,7 @@ class Conta(models.Model):
     agencia = models.CharField(max_length=10)
     numero = models.CharField(max_length=25)
     tipo = models.CharField(max_length=20)
-    limite = models.DecimalField(max_digits=10, decimal_places=2)
+    limite = models.DecimalField(null=True, max_digits=10, decimal_places=2)
     ativa = models.BooleanField()
     id_cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
 
@@ -109,7 +109,7 @@ class Investimento(models.Model):
 
 class Emprestimo(models.Model):
     id_conta = models.ForeignKey(Conta, on_delete=models.CASCADE)
-    data_solicitacao = models.DateField(auto_now=True)
+    data_solicitacao = models.DateField(auto_now_add=True)
     valor_solicitado = models.DecimalField(max_digits=10, decimal_places=2)
     juros = models.FloatField()
     aprovado = models.BooleanField()
@@ -143,7 +143,7 @@ class EmprestimoParcela(models.Model):
 
 class Cartao(models.Model):
     id_conta = models.ForeignKey(Conta, on_delete=models.CASCADE)
-    numero = models.CharField(max_length=30)
+    numero = models.CharField(max_length=30, unique=True)
     cvv = models.CharField(max_length=5)
     validade = models.DateField()
     bandeira = models.CharField(max_length=20)
@@ -159,7 +159,7 @@ class Cartao(models.Model):
 
 class Movimentacao(models.Model):
     id_cartao = models.ForeignKey(Cartao, on_delete=models.CASCADE)
-    data_hora = models.DateTimeField(auto_now=True)
+    data_hora = models.DateTimeField(auto_now_add=True)
     operacao = models.CharField(max_length=20)
     valor = models.DecimalField(max_digits=10, decimal_places=2)
 

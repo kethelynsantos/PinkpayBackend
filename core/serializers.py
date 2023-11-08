@@ -10,6 +10,7 @@ class EnderecoSerializer(serializers.ModelSerializer):
 
 
 class ClienteSerializer(serializers.ModelSerializer):
+    endereco = serializers.PrimaryKeyRelatedField(queryset=Endereco.objects.all())
     senha = serializers.SerializerMethodField()
 
     class Meta:
@@ -22,6 +23,8 @@ class ClienteSerializer(serializers.ModelSerializer):
 
 
 class ClientePFSerializer(serializers.ModelSerializer):
+    cliente = serializers.PrimaryKeyRelatedField(queryset=Cliente.objects.all())
+
     class Meta:
         extra_kwargs = {
             'cpf': {'write_only': True},
@@ -32,6 +35,8 @@ class ClientePFSerializer(serializers.ModelSerializer):
 
 
 class ClientePJSerializer(serializers.ModelSerializer):
+    cliente = serializers.PrimaryKeyRelatedField(queryset=Cliente.objects.all())
+
     class Meta:
         extra_kwargs = {
             'cnpj': {'write_only': True},
@@ -43,6 +48,8 @@ class ClientePJSerializer(serializers.ModelSerializer):
 
 
 class ContatoSerializer(serializers.ModelSerializer):
+    cliente = serializers.PrimaryKeyRelatedField(queryset=Cliente.objects.all())
+
     class Meta:
         extra_kwargs = {
             'email': {'write_only': True}
@@ -52,30 +59,39 @@ class ContatoSerializer(serializers.ModelSerializer):
 
 
 class ContaSerializer(serializers.ModelSerializer):
+    cliente = serializers.PrimaryKeyRelatedField(queryset=Cliente.objects.all())
+
     class Meta:
         model = Conta
         fields = '__all__'
 
 
 class InvestimentoSerializer(serializers.ModelSerializer):
+    conta = serializers.PrimaryKeyRelatedField(queryset=Conta.objects.all())
+
     class Meta:
         model = Investimento
         fields = '__all__'
 
 
 class EmprestimoSerializer(serializers.ModelSerializer):
+    conta = serializers.PrimaryKeyRelatedField(queryset=Conta.objects.all())
+
     class Meta:
         model = Emprestimo
         fields = '__all__'
 
 
 class EmprestimoParcelaSerializer(serializers.ModelSerializer):
+    emprestimo = serializers.PrimaryKeyRelatedField(queryset=Emprestimo.objects.all())
+
     class Meta:
         model = EmprestimoParcela
         fields = '__all__'
 
 
 class CartaoSerializer(serializers.ModelSerializer):
+    conta = serializers.PrimaryKeyRelatedField(queryset=Conta.objects.all())
     numero = serializers.SerializerMethodField()
     cvv = serializers.SerializerMethodField()
 
@@ -93,6 +109,13 @@ class CartaoSerializer(serializers.ModelSerializer):
 
 
 class MovimentacaoSerializer(serializers.ModelSerializer):
+    conta = serializers.PrimaryKeyRelatedField(queryset=Conta.objects.all())
+
     class Meta:
         model = Movimentacao
         fields = '__all__'
+
+    def create(self, validated_data):
+        # Aqui você pode criar uma nova instância de Movimentacao
+        movimentacao = Movimentacao.objects.create(**validated_data)
+        return movimentacao
