@@ -1,4 +1,30 @@
 from django.db import models
+from django.contrib.auth.models import (
+    AbstractBaseUser,
+    PermissionsMixin,
+    BaseUserManager,
+)
+
+# https://dev.to/lyamaa/authenticate-with-djoser-2kf7
+
+
+# class CustomUserManager(BaseUserManager):
+#     def create_user(self, email, username, password=None, **extra_fields):
+#         if not email:
+#             raise ValueError("User must have an email")
+#         email = self.normalize_email(email)
+#         user = self.model(email=email, username=username, **extra_fields)
+#         user.set_password(password)
+#         user.save(using=self._db)
+#         return user
+#
+#     def create_superuser(self, cpf, email, password=None, **extra_fields):
+#         user = self.create_user(cpf, email, password=password, **extra_fields)
+#         user.is_active = True
+#         user.is_staff = True
+#         user.is_admin = True
+#         user.save(using=self._db)
+#         return user
 
 
 class Endereco(models.Model):
@@ -18,10 +44,11 @@ class Endereco(models.Model):
 
 class Cliente(models.Model):
     id_endereco = models.ForeignKey(Endereco, on_delete=models.CASCADE)
-    razao_social = models.CharField(max_length=100)
-    social_fantasia = models.CharField(max_length=100)
+    nome = models.CharField(max_length=100)
     foto = models.CharField(max_length=100)
     data_nascimento = models.DateField()
+    telefone = models.CharField(max_length=15)
+    email = models.EmailField(max_length=50)
     usuario = models.CharField(max_length=10)
     senha = models.IntegerField()
 
@@ -30,10 +57,11 @@ class Cliente(models.Model):
         verbose_name_plural = 'Clientes'
 
     def __str__(self):
-        return f'{self.razao_social}, {self.social_fantasia}'
+        return f'{self.usuario}, {self.nome}'
 
 
 class ClientePF(models.Model):
+    id_cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, null=True)
     cpf = models.CharField(max_length=15)
     rg = models.CharField(max_length=15)
 
@@ -46,65 +74,32 @@ class ClientePF(models.Model):
 
 
 class ClientePJ(models.Model):
+    id_cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, null=True)
     cnpj = models.CharField(max_length=25)
-    inscricao_estadual = models.CharField(max_length=30)
-    inscricao_municipal = models.CharField(max_length=30)
+    razao_social = models.CharField(max_length=100, null=True)
 
     class Meta:
         verbose_name = 'ClientePJ'
         verbose_name_plural = 'ClientesPJ'
 
     def __str__(self):
-        return self.cnpj
-
-
-class Contato(models.Model):
-    id_cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
-    numero = models.CharField(max_length=15)
-    ramal = models.CharField(max_length=25)
-    email = models.EmailField(max_length=50)
-    observacao = models.CharField(max_length=50)
-
-    class Meta:
-        verbose_name = 'Contato'
-        verbose_name_plural = 'Contatos'
-
-    def __str__(self):
-        return f'{self.numero}, {self.email}'
+        return f'{self.cnpj}, {self.razao_social}'
 
 
 class Conta(models.Model):
+    id_cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
     agencia = models.CharField(max_length=10)
     numero = models.CharField(max_length=25)
     tipo = models.CharField(max_length=20)
-    limite = models.DecimalField(null=True, max_digits=10, decimal_places=2)
+    saldo = models.DecimalField(null=True, max_digits=10, decimal_places=2)
     ativa = models.BooleanField()
-    id_cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
 
     class Meta:
         verbose_name = 'Conta'
         verbose_name_plural = 'Contas'
 
     def __str__(self):
-        return f'{self.agencia}, {self.ativa}'
-
-
-class Investimento(models.Model):
-    id_conta = models.ForeignKey(Conta, on_delete=models.CASCADE)
-    tipo = models.CharField(max_length=30)
-    aporte = models.DecimalField(max_digits=10, decimal_places=2)
-    taxa_adm = models.FloatField()
-    prazo = models.CharField(max_length=20)
-    grau_risco = models.CharField(max_length=5)
-    rentabilidade = models.DecimalField(max_digits=10, decimal_places=2)
-    finalizado = models.BooleanField()
-
-    class Meta:
-        verbose_name = 'Investimento'
-        verbose_name_plural = 'Investimentos'
-
-    def __str__(self):
-        return f'{self.tipo}, {self.rentabilidade}'
+        return f'{self.numero}, {self.ativa}'
 
 
 class Emprestimo(models.Model):
@@ -123,22 +118,6 @@ class Emprestimo(models.Model):
 
     def __str__(self):
         return f'{self.valor_solicitado}, {self.aprovado}'
-
-
-class EmprestimoParcela(models.Model):
-    id_emprestimo = models.ForeignKey(Emprestimo, on_delete=models.CASCADE)
-    numero = models.IntegerField()
-    data_vencimento = models.DateField()
-    valor_parcela = models.DecimalField(max_digits=10, decimal_places=2)
-    data_pagamento = models.DateField(null=True, blank=True)
-    valor_pago = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-
-    class Meta:
-        verbose_name = 'EmprestimoParcela'
-        verbose_name_plural = 'EmprestimosParcelas'
-
-    def __str__(self):
-        return f'{self.numero}, {self.valor_parcela}'
 
 
 class Cartao(models.Model):

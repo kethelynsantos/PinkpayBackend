@@ -1,6 +1,6 @@
 from rest_framework import serializers
-from .models import Endereco, Cliente, ClientePF, ClientePJ, Contato, Conta, Investimento, \
-    Emprestimo, EmprestimoParcela, Cartao, Movimentacao
+from .models import Endereco, Cliente, ClientePF, ClientePJ, Contato, Conta, \
+    Emprestimo, Cartao, Movimentacao
 
 
 class EnderecoSerializer(serializers.ModelSerializer):
@@ -10,7 +10,7 @@ class EnderecoSerializer(serializers.ModelSerializer):
 
 
 class ClienteSerializer(serializers.ModelSerializer):
-    endereco = serializers.PrimaryKeyRelatedField(queryset=Endereco.objects.all())
+    # endereco = serializers.PrimaryKeyRelatedField(queryset=Endereco.objects.all())
     senha = serializers.SerializerMethodField()
 
     class Meta:
@@ -39,7 +39,6 @@ class ClientePJSerializer(serializers.ModelSerializer):
 
     class Meta:
         extra_kwargs = {
-            'cnpj': {'write_only': True},
             'inscricao_estadual': {'write_only': True},
             'inscricao_municipal': {'write_only': True}
         }
@@ -66,27 +65,11 @@ class ContaSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class InvestimentoSerializer(serializers.ModelSerializer):
-    conta = serializers.PrimaryKeyRelatedField(queryset=Conta.objects.all())
-
-    class Meta:
-        model = Investimento
-        fields = '__all__'
-
-
 class EmprestimoSerializer(serializers.ModelSerializer):
     conta = serializers.PrimaryKeyRelatedField(queryset=Conta.objects.all())
 
     class Meta:
         model = Emprestimo
-        fields = '__all__'
-
-
-class EmprestimoParcelaSerializer(serializers.ModelSerializer):
-    emprestimo = serializers.PrimaryKeyRelatedField(queryset=Emprestimo.objects.all())
-
-    class Meta:
-        model = EmprestimoParcela
         fields = '__all__'
 
 
@@ -109,7 +92,7 @@ class CartaoSerializer(serializers.ModelSerializer):
 
 
 class MovimentacaoSerializer(serializers.ModelSerializer):
-    conta = serializers.PrimaryKeyRelatedField(queryset=Conta.objects.all())
+    # conta = serializers.PrimaryKeyRelatedField(queryset=Conta.objects.all())
 
     class Meta:
         model = Movimentacao

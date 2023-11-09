@@ -1,16 +1,16 @@
 from django.contrib import admin
-from .models import Endereco, Cliente, ClientePF, ClientePJ, Contato, Conta, Investimento, Emprestimo, \
-    EmprestimoParcela, Cartao, Movimentacao
+from .models import Endereco, Cliente, ClientePF, ClientePJ, Contato, Conta, Emprestimo, \
+    Cartao, Movimentacao
 
 
 @admin.register(Endereco)
 class EnderecoAdmin(admin.ModelAdmin):
-    list_display = ('logradouro', 'bairro', 'cidade', 'uf', 'cep')
+    list_display = ('bairro', 'cidade', 'uf')
 
 
 @admin.register(Cliente)
 class ClienteAdmin(admin.ModelAdmin):
-    list_display = ('razao_social', 'social_fantasia', 'usuario')
+    list_display = ('nome', 'usuario')
 
 
 @admin.register(ClientePF)
@@ -20,7 +20,7 @@ class ClientePFAdmin(admin.ModelAdmin):
 
 @admin.register(ClientePJ)
 class ClientePJAdmin(admin.ModelAdmin):
-    list_display = ('cnpj', 'inscricao_estadual', 'inscricao_municipal')
+    list_display = ('cnpj', 'razao_social')
 
 
 @admin.register(Contato)
@@ -30,12 +30,7 @@ class ContatoAdmin(admin.ModelAdmin):
 
 @admin.register(Conta)
 class ContaAdmin(admin.ModelAdmin):
-    list_display = ('agencia', 'numero', 'ativa')
-
-
-@admin.register(Investimento)
-class InvestimentoAdmin(admin.ModelAdmin):
-    list_display = ('tipo', 'taxa_adm', 'rentabilidade')
+    list_display = ('numero', 'ativa')
 
 
 @admin.register(Emprestimo)
@@ -43,14 +38,9 @@ class EmprestimoAdmin(admin.ModelAdmin):
     list_display = ('valor_solicitado', 'aprovado')
 
 
-@admin.register(EmprestimoParcela)
-class EmprestimoParcelaAdmin(admin.ModelAdmin):
-    list_display = ('numero', 'data_pagamento', 'valor_parcela')
-
-
 @admin.register(Cartao)
 class CartaoAdmin(admin.ModelAdmin):
-    list_display = ('numero', 'cvv', 'situacao')
+    list_display = ('numero', 'situacao')
 
 
 @admin.register(Movimentacao)
