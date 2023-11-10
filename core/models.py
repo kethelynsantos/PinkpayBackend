@@ -4,6 +4,7 @@ from django.contrib.auth.models import (
     PermissionsMixin,
     BaseUserManager,
 )
+from django.contrib.auth.hashers import make_password
 
 # https://dev.to/lyamaa/authenticate-with-djoser-2kf7
 
@@ -26,7 +27,7 @@ from django.contrib.auth.models import (
 #         user.save(using=self._db)
 #         return user
 
-
+# Modelo para representar endereços
 class Endereco(models.Model):
     logradouro = models.CharField(max_length=100)
     bairro = models.CharField(max_length=75)
@@ -42,15 +43,20 @@ class Endereco(models.Model):
         return f'{self.logradouro}, {self.bairro}, {self.cidade}, {self.uf}'
 
 
+# Modelo para representar clientes
 class Cliente(models.Model):
     id_endereco = models.ForeignKey(Endereco, on_delete=models.CASCADE)
     nome = models.CharField(max_length=100)
-    foto = models.CharField(max_length=100)
+    foto = models.ImageField(upload_to='cliente_photos/')
     data_nascimento = models.DateField()
     telefone = models.CharField(max_length=15)
     email = models.EmailField(max_length=50)
     usuario = models.CharField(max_length=10)
-    senha = models.IntegerField()
+    senha = models.CharField(max_length=128)
+
+    def save(self, *args, **kwargs):
+        self.senha = make_password(self.senha)
+        super().save(*args, **kwargs)
 
     class Meta:
         verbose_name = 'Cliente'
@@ -60,8 +66,16 @@ class Cliente(models.Model):
         return f'{self.usuario}, {self.nome}'
 
 
-class ClientePF(models.Model):
+# Modelo abstrato para representar dados compartilhados entre ClientePF e ClientePJ
+class ClienteBase(models.Model):
     id_cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, null=True)
+
+    class Meta:
+        abstract = True
+
+
+# Modelo para representar clientes pessoa física
+class ClientePF(models.Model):
     cpf = models.CharField(max_length=15)
     rg = models.CharField(max_length=15)
 
@@ -73,8 +87,8 @@ class ClientePF(models.Model):
         return f'{self.cpf}, {self.rg}'
 
 
+# Modelo para representar clientes pessoa jurídica
 class ClientePJ(models.Model):
-    id_cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, null=True)
     cnpj = models.CharField(max_length=25)
     razao_social = models.CharField(max_length=100, null=True)
 
@@ -86,7 +100,9 @@ class ClientePJ(models.Model):
         return f'{self.cnpj}, {self.razao_social}'
 
 
+# Modelo para representar contas
 class Conta(models.Model):
+    # Relacionamento com o modelo de Cliente
     id_cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
     agencia = models.CharField(max_length=10)
     numero = models.CharField(max_length=25)
@@ -102,8 +118,10 @@ class Conta(models.Model):
         return f'{self.numero}, {self.ativa}'
 
 
+# Modelo para representar empréstimos
 class Emprestimo(models.Model):
-    id_conta = models.ForeignKey(Conta, on_delete=models.CASCADE)
+    # Relacionamento com o modelo de Conta
+    id_conta = models.ForeignKey(Conta, on_delete=models.CASCADE, related_name='emprestimos')
     data_solicitacao = models.DateField(auto_now_add=True)
     valor_solicitado = models.DecimalField(max_digits=10, decimal_places=2)
     juros = models.FloatField()
@@ -120,8 +138,10 @@ class Emprestimo(models.Model):
         return f'{self.valor_solicitado}, {self.aprovado}'
 
 
+# Modelo para representar cartões
 class Cartao(models.Model):
-    id_conta = models.ForeignKey(Conta, on_delete=models.CASCADE)
+    # Relacionamento com o modelo de Conta
+    id_conta = models.ForeignKey(Conta, on_delete=models.CASCADE, related_name='cartoes')
     numero = models.CharField(max_length=30, unique=True)
     cvv = models.CharField(max_length=5)
     validade = models.DateField()
@@ -136,7 +156,9 @@ class Cartao(models.Model):
         return f'{self.numero}, {self.situacao}'
 
 
+# Modelo para representar movimentações
 class Movimentacao(models.Model):
+    # Relacionamento com o modelo de Cartao
     id_cartao = models.ForeignKey(Cartao, on_delete=models.CASCADE)
     data_hora = models.DateTimeField(auto_now_add=True)
     operacao = models.CharField(max_length=20)
