@@ -1,48 +1,60 @@
 from django.contrib import admin
-from .models import Endereco, Cliente, ClientePF, ClientePJ, Contato, Conta, Emprestimo, \
-    Cartao, Movimentacao
+from .models import CustomUser, Address, Client, IndividualClient, BusinessClient, Account, Loan, Card, Transaction
+from django.contrib.auth.admin import UserAdmin
 
 
-@admin.register(Endereco)
-class EnderecoAdmin(admin.ModelAdmin):
-    list_display = ('bairro', 'cidade', 'uf')
+class CustomUserAdmin(UserAdmin):
+    model = CustomUser
+    list_display = ['cpf', 'is_staff', 'is_active']
+    search_fields = ['cpf']
+    ordering = ['cpf']
 
 
-@admin.register(Cliente)
-class ClienteAdmin(admin.ModelAdmin):
-    list_display = ('nome', 'usuario')
+admin.site.register(CustomUser, CustomUserAdmin)
 
 
-@admin.register(ClientePF)
-class ClientePFAdmin(admin.ModelAdmin):
+@admin.register(Address)
+class AddressAdmin(admin.ModelAdmin):
+    list_display = ('street', 'neighborhood', 'city', 'state')
+
+
+@admin.register(Client)
+class ClientAdmin(admin.ModelAdmin):
+    list_display = ('name', 'phone', 'email')
+    search_fields = ['name', 'phone', 'email']
+
+
+@admin.register(IndividualClient)
+class IndividualClientAdmin(admin.ModelAdmin):
     list_display = ('cpf', 'rg')
+    search_fields = ['cpf', 'rg']
 
 
-@admin.register(ClientePJ)
-class ClientePJAdmin(admin.ModelAdmin):
-    list_display = ('cnpj', 'razao_social')
+@admin.register(BusinessClient)
+class BusinessClientAdmin(admin.ModelAdmin):
+    list_display = ('cnpj', 'corporate_name')
+    search_fields = ['cnpj', 'corporate_name']
 
 
-@admin.register(Contato)
-class ContatoAdmin(admin.ModelAdmin):
-    list_display = ('numero', 'email')
+@admin.register(Account)
+class AccountAdmin(admin.ModelAdmin):
+    list_display = ('number', 'active')
+    search_fields = ['number']
 
 
-@admin.register(Conta)
-class ContaAdmin(admin.ModelAdmin):
-    list_display = ('numero', 'ativa')
+@admin.register(Loan)
+class LoanAdmin(admin.ModelAdmin):
+    list_display = ('requested_amount', 'approved')
+    search_fields = ['requested_amount', 'approved']
 
 
-@admin.register(Emprestimo)
-class EmprestimoAdmin(admin.ModelAdmin):
-    list_display = ('valor_solicitado', 'aprovado')
+@admin.register(Card)
+class CardAdmin(admin.ModelAdmin):
+    list_display = ('number', 'status')
+    search_fields = ['number']
 
 
-@admin.register(Cartao)
-class CartaoAdmin(admin.ModelAdmin):
-    list_display = ('numero', 'situacao')
-
-
-@admin.register(Movimentacao)
-class MovimentacaoAdmin(admin.ModelAdmin):
-    list_display = ('operacao', 'valor')
+@admin.register(Transaction)
+class TransactionAdmin(admin.ModelAdmin):
+    list_display = ('operation', 'amount')
+    search_fields = ['operation', 'amount']

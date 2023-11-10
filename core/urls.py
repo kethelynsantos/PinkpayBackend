@@ -1,12 +1,12 @@
-from django.urls import path
-
+from django.urls import path, include
 from rest_framework.routers import SimpleRouter
-
-from .viewsets import (
-    ClienteViewSet,
-    MovimentacaoViewSet)
-
+from .views import CustomUserViewSet, ClientViewSet
 
 router = SimpleRouter()
-router.register('cliente', ClienteViewSet)
-router.register('movimentacao', MovimentacaoViewSet)
+router.register('customuser', CustomUserViewSet)
+router.register('client', ClientViewSet)
+
+urlpatterns = [
+    path('api/v1/', include(router.urls)),
+    # path('api/v1/auth/register/', ClientViewSet.as_view(), name='create_user'),
+]

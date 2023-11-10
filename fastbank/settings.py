@@ -36,14 +36,14 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    'core',
+
     'django_filters',
     'rest_framework',
     'rest_framework.authtoken',
     'djoser',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
-
-    'core',
 ]
 
 MIDDLEWARE = [
@@ -76,6 +76,16 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'fastbank.wsgi.application'
 
+# DJOSER
+DJOSER = {
+    'LOGIN_FIELD': 'cpf',
+    'HIDE_USERS': False,
+    'SERIALIZERS': {
+        'user_create': 'core.serializers.CustomUserCreateSerializer',
+        'user': 'core.serializers.CustomUserSerializer',
+    },
+}
+
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
@@ -103,6 +113,9 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+
+AUTH_USER_MODEL = 'core.CustomUser'
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/

@@ -1,89 +1,86 @@
 from rest_framework import serializers
-from .models import Endereco, Cliente, ClientePF, ClientePJ, Contato, Conta, \
-    Emprestimo, Cartao, Movimentacao
+from .models import CustomUser, Address, Client, IndividualClient, BusinessClient, Account, \
+    Loan, Card, Transaction
 
 
-class EnderecoSerializer(serializers.ModelSerializer):
+class CustomUserSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+
     class Meta:
-        model = Endereco
+        model = CustomUser
+        fields = ('cpf', 'password')
+
+    def create(self, validated_data):
+        password = validated_data.pop('password', None)
+        user = CustomUser.objects.create_user(**validated_data, password=password)
+        return user
+
+
+class AddressSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Address
         fields = '__all__'
 
 
-class ClienteSerializer(serializers.ModelSerializer):
-    # endereco = serializers.PrimaryKeyRelatedField(queryset=Endereco.objects.all())
-    senha = serializers.SerializerMethodField()
+class ClientSerializer(serializers.ModelSerializer):
+    # address = serializers.PrimaryKeyRelatedField(queryset=Address.objects.all())
 
     class Meta:
-        model = Cliente
+        model = Client
         fields = '__all__'
 
-    @staticmethod
-    def get_senha(obj):
-        return "********"
 
-
-class ClientePFSerializer(serializers.ModelSerializer):
-    cliente = serializers.PrimaryKeyRelatedField(queryset=Cliente.objects.all())
+class IndividualClientSerializer(serializers.ModelSerializer):
+    client = serializers.PrimaryKeyRelatedField(queryset=Client.objects.all())
 
     class Meta:
         extra_kwargs = {
             'cpf': {'write_only': True},
             'rg': {'write_only': True}
         }
-        model = ClientePF
+        model = IndividualClient
         fields = '__all__'
 
 
-class ClientePJSerializer(serializers.ModelSerializer):
-    cliente = serializers.PrimaryKeyRelatedField(queryset=Cliente.objects.all())
+class BusinessClientSerializer(serializers.ModelSerializer):
+    client = serializers.PrimaryKeyRelatedField(queryset=Client.objects.all())
 
     class Meta:
         extra_kwargs = {
-            'inscricao_estadual': {'write_only': True},
-            'inscricao_municipal': {'write_only': True}
+            'state_registration': {'write_only': True},
+            'municipal_registration': {'write_only': True}
         }
-        model = ClientePJ
+        model = BusinessClient
         fields = '__all__'
 
 
-class ContatoSerializer(serializers.ModelSerializer):
-    cliente = serializers.PrimaryKeyRelatedField(queryset=Cliente.objects.all())
+class AccountSerializer(serializers.ModelSerializer):
+    client = serializers.PrimaryKeyRelatedField(queryset=Client.objects.all())
 
     class Meta:
-        extra_kwargs = {
-            'email': {'write_only': True}
-        }
-        model = Contato
+        model = Account
         fields = '__all__'
 
 
-class ContaSerializer(serializers.ModelSerializer):
-    cliente = serializers.PrimaryKeyRelatedField(queryset=Cliente.objects.all())
+class LoanSerializer(serializers.ModelSerializer):
+    account = serializers.PrimaryKeyRelatedField(queryset=Account.objects.all())
 
     class Meta:
-        model = Conta
+        model = Loan
         fields = '__all__'
 
 
-class EmprestimoSerializer(serializers.ModelSerializer):
-    conta = serializers.PrimaryKeyRelatedField(queryset=Conta.objects.all())
-
-    class Meta:
-        model = Emprestimo
-        fields = '__all__'
-
-
-class CartaoSerializer(serializers.ModelSerializer):
-    conta = serializers.PrimaryKeyRelatedField(queryset=Conta.objects.all())
-    numero = serializers.SerializerMethodField()
+class CardSerializer(serializers.ModelSerializer):
+    account = serializers.PrimaryKeyRelatedField(queryset=Account.objects.all())
+    number = serializers.SerializerMethodField()
     cvv = serializers.SerializerMethodField()
 
     class Meta:
-        model = Cartao
+        model = Card
         fields = '__all__'
 
     @staticmethod
-    def get_numero(obj):
+    def get_number(obj):
         return "****************"
 
     @staticmethod
@@ -91,14 +88,13 @@ class CartaoSerializer(serializers.ModelSerializer):
         return "***"
 
 
-class MovimentacaoSerializer(serializers.ModelSerializer):
-    # conta = serializers.PrimaryKeyRelatedField(queryset=Conta.objects.all())
+class TransactionSerializer(serializers.ModelSerializer):
+    # account = serializers.PrimaryKeyRelatedField(queryset=Account.objects.all())
 
     class Meta:
-        model = Movimentacao
+        model = Transaction
         fields = '__all__'
 
     def create(self, validated_data):
-        # Aqui você pode criar uma nova instância de Movimentacao
-        movimentacao = Movimentacao.objects.create(**validated_data)
-        return movimentacao
+        transaction = Transaction.objects.create(**validated_data)
+        return transaction
