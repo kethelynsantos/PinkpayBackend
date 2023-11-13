@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import CustomUser, Address, Client, IndividualClient, BusinessClient, Account, Loan, Card, Transaction
+from .models import CustomUser, Address, Client, Account, Loan, Card, Transaction
 from django.contrib.auth.admin import UserAdmin
 
 
@@ -21,19 +21,7 @@ class AddressAdmin(admin.ModelAdmin):
 @admin.register(Client)
 class ClientAdmin(admin.ModelAdmin):
     list_display = ('name', 'phone', 'email')
-    search_fields = ['name', 'phone', 'email']
-
-
-@admin.register(IndividualClient)
-class IndividualClientAdmin(admin.ModelAdmin):
-    list_display = ('cpf', 'rg')
-    search_fields = ['cpf', 'rg']
-
-
-@admin.register(BusinessClient)
-class BusinessClientAdmin(admin.ModelAdmin):
-    list_display = ('cnpj', 'corporate_name')
-    search_fields = ['cnpj', 'corporate_name']
+    # search_fields = ['name', 'phone', 'email']
 
 
 @admin.register(Account)
@@ -44,13 +32,13 @@ class AccountAdmin(admin.ModelAdmin):
 
 @admin.register(Loan)
 class LoanAdmin(admin.ModelAdmin):
-    list_display = ('requested_amount', 'approved')
-    search_fields = ['requested_amount', 'approved']
+    list_display = ('value', 'approved')
+    search_fields = ['value', 'approved']
 
 
 @admin.register(Card)
 class CardAdmin(admin.ModelAdmin):
-    list_display = ('number', 'status')
+    list_display = ('number', 'account')
     search_fields = ['number']
 
 

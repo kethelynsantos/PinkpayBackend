@@ -4,6 +4,7 @@ from django.contrib.auth.models import (
     PermissionsMixin,
     BaseUserManager,
 )
+from django.contrib.auth import get_user_model
 
 
 class CustomUserManager(BaseUserManager):
@@ -56,9 +57,10 @@ class Address(models.Model):
 # Model to represent clients
 class Client(models.Model):
     # Relationship with the Address model
-    address = models.ForeignKey(Address, on_delete=models.CASCADE)
+    address = models.ForeignKey(Address, on_delete=models.CASCADE, blank=True, null=True)
+    user = models.OneToOneField(get_user_model(), on_delete=models.CASCADE, blank=True, null=True)
     name = models.CharField(max_length=100)
-    photo = models.ImageField(upload_to='client_photos/', null=True)
+    photo = models.CharField(max_length=100, null=True)
     birth_date = models.DateField()
     phone = models.CharField(max_length=15)
     email = models.EmailField(max_length=50)
@@ -68,37 +70,7 @@ class Client(models.Model):
         verbose_name_plural = 'Clients'
 
     def __str__(self):
-        return f'{self.name}'
-
-
-# Model to represent individual clients (pf)
-class IndividualClient(models.Model):
-    # Relationship with the Client model
-    client = models.OneToOneField(Client, on_delete=models.CASCADE)
-    cpf = models.CharField(max_length=15)
-    rg = models.CharField(max_length=15)
-
-    class Meta:
-        verbose_name = 'Individual Client'
-        verbose_name_plural = 'Individual Clients'
-
-    def __str__(self):
-        return f'{self.client.name} - {self.cpf}, {self.rg}'
-
-
-# Model to represent business clients (pj)
-class BusinessClient(models.Model):
-    # Relationship with the Client model
-    client = models.OneToOneField(Client, on_delete=models.CASCADE)
-    cnpj = models.CharField(max_length=25)
-    corporate_name = models.CharField(max_length=100, null=True)
-
-    class Meta:
-        verbose_name = 'Business Client'
-        verbose_name_plural = 'Business Clients'
-
-    def __str__(self):
-        return f'{self.client.name} - {self.cnpj}, {self.corporate_name}'
+        return f'Cliente: {self.name}'
 
 
 # Model to represent accounts
@@ -107,7 +79,6 @@ class Account(models.Model):
     client = models.ForeignKey(Client, on_delete=models.CASCADE)
     agency = models.CharField(max_length=10)
     number = models.CharField(max_length=25)
-    type = models.CharField(max_length=20)
     balance = models.DecimalField(null=True, max_digits=10, decimal_places=2)
     active = models.BooleanField()
 
@@ -124,19 +95,18 @@ class Loan(models.Model):
     # Relationship with the Account model
     account = models.ForeignKey(Account, on_delete=models.CASCADE, related_name='loans')
     request_date = models.DateField(auto_now_add=True)
-    requested_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    value = models.DecimalField(max_digits=10, decimal_places=2)
     interest_rate = models.FloatField()
     approved = models.BooleanField()
     installment_number = models.IntegerField()
     approval_date = models.DateField(null=True, blank=True)
-    note = models.CharField(max_length=200)
 
     class Meta:
         verbose_name = 'Loan'
         verbose_name_plural = 'Loans'
 
     def __str__(self):
-        return f'{self.requested_amount}, {self.approved}'
+        return f'{self.value}, {self.approved}'
 
 
 # Model to represent cards
@@ -146,15 +116,14 @@ class Card(models.Model):
     number = models.CharField(max_length=30, unique=True)
     cvv = models.CharField(max_length=5)
     expiration_date = models.DateField()
-    brand = models.CharField(max_length=20)
-    status = models.CharField(max_length=20)
+    flag = models.CharField(max_length=20)
 
     class Meta:
         verbose_name = 'Card'
         verbose_name_plural = 'Cards'
 
     def __str__(self):
-        return f'{self.number}, {self.status}'
+        return f'{self.number}, {self.account}'
 
 
 # Model to represent transactions
