@@ -2,6 +2,12 @@ from rest_framework import serializers
 from .models import CustomUser, Address, Client, Account, Loan, Card, Transaction
 
 
+class AddressSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Address
+        fields = '__all__'
+
+
 class CustomUserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
 
@@ -15,15 +21,8 @@ class CustomUserSerializer(serializers.ModelSerializer):
         return user
 
 
-class AddressSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Address
-        fields = "__all__"
-
-
 class ClientSerializer(serializers.ModelSerializer):
-    # address = serializers.PrimaryKeyRelatedField(queryset=Address.objects.all())
-    user = CustomUserSerializer(many=False,read_only = True)
+    user = CustomUserSerializer(many=False, read_only=True)
 
     class Meta:
         model = Client
@@ -31,37 +30,41 @@ class ClientSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         user = self.context['request'].user
+
+        # verifica se já existe um cliente para este usuário
+        client = Client.objects.filter(user=user).first()
+        if client:
+            raise serializers.ValidationError("Cliente já existe para este usuário.")
+
+        # campos obrigatórios
         name = validated_data['name']
-        # photo = validated_data['photo'
         birth_date = validated_data['birth_date']
         phone = validated_data['phone']
         email = validated_data['email']
-        print(user)
-        print(user)
+
+        # campo opcional
+        photo = validated_data.get('photo', None)
+
+        # criação do cliente
         client = Client(
-            user = user,
-            name = name,
-            birth_date = birth_date,
-            phone = phone,
-            email = email
+            user=user,
+            name=name,
+            photo=photo,
+            birth_date=birth_date,
+            phone=phone,
+            email=email
         )
+
+        # Verifica se há dados para o endereço
+        address_data = validated_data.get('address', None)
+        if address_data:
+            address_serializer = AddressSerializer(data=address_data)
+            address_serializer.is_valid(raise_exception=True)
+            address = address_serializer.save()
+            client.address = address
+
         client.save()
         return client
-        
-        
-        
-        
-        
-        """
-                        address = models.ForeignKey(Address, on_delete=models.CASCADE)
-        user = models.OneToOneField(get_user_model(), on_delete=models.CASCADE, blank=True, null=True)
-        name = models.CharField(max_length=100)
-        photo = models.CharField(max_length=100, null=True)
-        birth_date = models.DateField()
-        phone = models.CharField(max_length=15)
-        email = models.EmailField(max_length=50)
-
-        """
 
 
 class AccountSerializer(serializers.ModelSerializer):
