@@ -11,4 +11,5 @@ router.register(r'address', AddressViewSet, basename='address')
 urlpatterns = [
     path('api/v1/', include(router.urls)),
     path('api/v1/auth/register/', ClientViewSet.as_view({'post': 'register'}), name='create_user'),
+
 ]
