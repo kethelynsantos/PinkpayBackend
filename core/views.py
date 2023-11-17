@@ -1,6 +1,6 @@
 from django.shortcuts import get_object_or_404
 from django_filters import rest_framework as filters
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, generics
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.authtoken.models import Token
@@ -76,3 +76,43 @@ class ClientViewSet(viewsets.ModelViewSet):
             Token.objects.filter(user=user_instance).delete()
 
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AccountViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = serializers.AccountSerializer
+    queryset = models.Account.objects.all()
+
+
+class DepositViewSet(viewsets.ModelViewSet):
+    queryset = models.Account.objects.all()
+    serializer_class = serializers.AccountSerializer
+
+    def create(self, request, *args, **kwargs):
+        deposit_amount = request.data.get('deposit_amount')
+        transaction_type = request.data.get('transaction_type', 'Deposit')
+        operation_type = request.data.get('operation_type', 'Credit', 'Deposit')
+        destination_account_id = request.data.get('destination_account')
+
+        if deposit_amount is not None and deposit_amount > 0 and destination_account_id:
+            # Verifica se a conta de destino existe
+            destination_account = get_object_or_404(models.Account, id=destination_account_id)
+
+            # Adiciona o valor ao saldo da conta de destino
+            destination_account.balance += deposit_amount
+            destination_account.save()
+
+            # Cria uma nova transação na conta de destino
+            transaction_data = {
+                'account': destination_account.id,
+                'type': transaction_type,
+                'operation': operation_type,
+                'balance': deposit_amount
+            }
+
+            transaction_serializer = serializers.TransactionSerializer(data=transaction_data)
+            transaction_serializer.is_valid(raise_exception=True)
+            transaction_serializer.save()
+
+            return Response(self.get_serializer(destination_account).data, status=status.HTTP_201_CREATED)
+
+        return Response({'error': 'Valor de depósito ou conta de destino inválidos'}, status=status.HTTP_400_BAD_REQUEST)

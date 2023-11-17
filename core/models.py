@@ -1,4 +1,7 @@
+import random
 from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.contrib.auth.models import (
     AbstractBaseUser,
     PermissionsMixin,
@@ -75,12 +78,11 @@ class Client(models.Model):
 
 # Model to represent accounts
 class Account(models.Model):
-    # Relationship with the Client model
-    client = models.ForeignKey(Client, on_delete=models.CASCADE)
-    agency = models.CharField(max_length=10)
+    client = models.OneToOneField(Client, on_delete=models.CASCADE)
+    agency = models.CharField(max_length=10, default='0000')
     number = models.CharField(max_length=25)
-    balance = models.DecimalField(null=True, max_digits=10, decimal_places=2)
-    active = models.BooleanField()
+    balance = models.DecimalField(null=True, max_digits=10, decimal_places=2, default=0.0)
+    active = models.BooleanField(default=True)
 
     class Meta:
         verbose_name = 'Account'
@@ -88,6 +90,22 @@ class Account(models.Model):
 
     def __str__(self):
         return f'{self.number}, {self.active}'
+
+    # sinal que será acionado sempre que um novo cliente for salvo
+    @receiver(post_save, sender=Client)
+    def create_account(sender, instance, created, **kwargs):
+        if created and not hasattr(instance, 'account'):
+            # verifica se o cliente já possui uma conta
+            if not hasattr(instance, 'account'):
+                # gera um número de conta aleatório
+                account_number = ''.join(random.choices('0123456789', k=15))
+
+            # cria uma nova conta para o cliente
+            account = Account.objects.create(client=instance, number=account_number)
+
+            # define o numero da agencia
+            account.agency = '28991'
+            account.save()
 
 
 # Model to represent loans
@@ -128,15 +146,15 @@ class Card(models.Model):
 
 # Model to represent transactions
 class Transaction(models.Model):
-    # Relationship with the Card model
-    card = models.ForeignKey(Card, on_delete=models.CASCADE)
+    account = models.ForeignKey(Account, on_delete=models.CASCADE)
+    type = models.CharField(max_length=30)
     date_time = models.DateTimeField(auto_now_add=True)
     operation = models.CharField(max_length=20)
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    balance = models.DecimalField(max_digits=10, decimal_places=2)
 
     class Meta:
         verbose_name = 'Transaction'
         verbose_name_plural = 'Transactions'
 
     def __str__(self):
-        return f'{self.operation}, {self.amount}'
+        return f'{self.operation}, {self.balance}'

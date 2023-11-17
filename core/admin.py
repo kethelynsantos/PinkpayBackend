@@ -44,5 +44,5 @@ class CardAdmin(admin.ModelAdmin):
 
 @admin.register(Transaction)
 class TransactionAdmin(admin.ModelAdmin):
-    list_display = ('operation', 'amount')
-    search_fields = ['operation', 'amount']
+    list_display = ('operation', 'balance')
+    search_fields = ['operation', 'balance']
