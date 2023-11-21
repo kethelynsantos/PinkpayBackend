@@ -6,6 +6,8 @@ from rest_framework.decorators import action
 from rest_framework.authtoken.models import Token
 from djoser.views import UserViewSet as DjoserUserViewSet
 
+from decimal import Decimal
+
 from core import serializers, models
 
 
@@ -90,8 +92,10 @@ class DepositViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         deposit_amount = request.data.get('deposit_amount')
         transaction_type = request.data.get('transaction_type', 'Deposit')
-        operation_type = request.data.get('operation_type', 'Credit', 'Deposit')
+        operation_type = request.data.get('operation_type', 'Credit') or 'Deposit'
         destination_account_id = request.data.get('destination_account')
+
+        deposit_amount = Decimal(request.data.get('deposit_amount', 0))
 
         if deposit_amount is not None and deposit_amount > 0 and destination_account_id:
             # Verifica se a conta de destino existe
