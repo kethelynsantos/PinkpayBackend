@@ -153,17 +153,19 @@ class CurrentBalanceView(generics.RetrieveAPIView):
         return Response(data, status=status.HTTP_200_OK)
 
 
+# realiza tranferencias entre contas existentes
 class TransferViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
     def create(self, request, *args, **kwargs):
         transfer_amount = Decimal(request.data.get('transfer_amount', 0))
-        sender_account_id = request.data.get('sender_account')
         recipient_cpf = request.data.get('recipient_cpf')
         transfer_type = request.data.get('transfer_type', 'Pix')
 
-        if transfer_amount is not None and transfer_amount > 0 and sender_account_id and recipient_cpf:
-            sender_account = get_object_or_404(models.Account, id=sender_account_id)
+        if transfer_amount is not None and transfer_amount > 0 and recipient_cpf:
+            # Obtenha a conta do usuário autenticado
+            sender_account = get_object_or_404(models.Account, client__user=request.user)
+
             recipient_user = get_object_or_404(models.CustomUser, cpf=recipient_cpf)
             recipient_account = get_object_or_404(models.Account, client__user=recipient_user)
 
@@ -177,11 +179,20 @@ class TransferViewSet(viewsets.ViewSet):
                 recipient_account.balance += transfer_amount
                 recipient_account.save()
 
+                # Determina a operação com base no tipo de transferência
+                if transfer_type.lower() == 'pix':
+                    operation_sender = 'Pix'
+                    operation_recipient = 'Pix'
+                else:
+                    # Ajuste para incluir 'Transação'
+                    operation_sender = transfer_type.capitalize()
+                    operation_recipient = transfer_type.capitalize()
+
                 # Cria uma nova transação para o remetente
                 sender_transaction_data = {
                     'account': sender_account.id,
                     'type': 'Transfer',
-                    'operation': 'Debit',
+                    'operation': operation_sender,
                     'balance': transfer_amount
                 }
 
@@ -192,8 +203,8 @@ class TransferViewSet(viewsets.ViewSet):
                 # Cria uma nova transação para o destinatário
                 recipient_transaction_data = {
                     'account': recipient_account.id,
-                    'type': 'Transfer',
-                    'operation': 'Credit',
+                    'type': 'Transfer Received',
+                    'operation': operation_recipient,
                     'balance': transfer_amount
                 }
 
@@ -206,3 +217,4 @@ class TransferViewSet(viewsets.ViewSet):
                 return Response({'error': 'Saldo insuficiente na conta do remetente'}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response({'error': 'Valores inválidos para a transferência'}, status=status.HTTP_400_BAD_REQUEST)
+
