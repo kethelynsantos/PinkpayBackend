@@ -9,6 +9,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.exceptions import ValidationError
 
 from decimal import Decimal
+from .utils import calculate_loan_approval
 
 from core import serializers, models
 
@@ -268,3 +269,46 @@ class CardViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
 
+class LoanViewSet(viewsets.ModelViewSet):
+    serializer_class = serializers.LoanSerializer
+    queryset = models.Loan.objects.all()
+
+    @action(detail=False, methods=['post'])
+    def request_loan(self, request):
+        # Obtenha o cliente autenticado
+        client = request.user.client
+        account = client.account
+
+        # Obtenha os dados da solicitação de empréstimo do corpo da solicitação
+        requested_amount = request.data.get('requested_amount')
+        installments = request.data.get('installments')
+        interest_rate = request.data.get('interest_rate')
+
+        # Adicione outras verificações de entrada conforme necessário
+
+        # Use a função de utils para verificar se o empréstimo é aprovado
+        try:
+            is_approved = calculate_loan_approval(account.balance, requested_amount, installments, interest_rate)
+        except ValidationError as e:
+            # Lida com validações e retorna uma resposta de erro, se necessário
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Crie o objeto Loan se o empréstimo for aprovado
+        if is_approved:
+            loan_data = {
+                'account': account.id,
+                'value': requested_amount,
+                'interest_rate': interest_rate,
+                'approved': True,
+                'installment_number': installments,
+                'approval_date': None  # Pode ser atualizado com a data real de aprovação
+            }
+
+            loan_serializer = serializers.LoanSerializer(data=loan_data)
+            if loan_serializer.is_valid():
+                loan_serializer.save()
+                return Response({'success': 'Empréstimo solicitado e aprovado com sucesso'}, status=status.HTTP_201_CREATED)
+            else:
+                return Response({'error': 'Erro ao salvar o empréstimo'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        else:
+            return Response({'error': 'Empréstimo não aprovado'}, status=status.HTTP_400_BAD_REQUEST)
