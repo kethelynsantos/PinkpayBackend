@@ -1,10 +1,11 @@
 from django.shortcuts import get_object_or_404
 from django_filters import rest_framework as filters
-from rest_framework import viewsets, status, generics
+from rest_framework import viewsets, status, generics, permissions
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.authtoken.models import Token
+from rest_framework.exceptions import ValidationError
 from djoser.views import UserViewSet as DjoserUserViewSet
 
 from decimal import Decimal
@@ -218,3 +219,8 @@ class TransferViewSet(viewsets.ViewSet):
 
         return Response({'error': 'Valores inválidos para a transferência'}, status=status.HTTP_400_BAD_REQUEST)
 
+
+class CardViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = models.Card.objects.all()
+    serializer_class = serializers.CardSerializer
+    permission_classes = [permissions.IsAuthenticated]

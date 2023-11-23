@@ -8,6 +8,8 @@ from django.contrib.auth.models import (
     BaseUserManager,
 )
 from django.contrib.auth import get_user_model
+from .utils import generate_card_number, generate_cvv, generate_expiration_date
+from django.core.validators import MinValueValidator
 
 
 class CustomUserManager(BaseUserManager):
@@ -129,12 +131,17 @@ class Loan(models.Model):
 
 # Model to represent cards
 class Card(models.Model):
-    # Relationship with the Account model
     account = models.ForeignKey(Account, on_delete=models.CASCADE, related_name='cards')
     number = models.CharField(max_length=30, unique=True)
     cvv = models.CharField(max_length=5)
     expiration_date = models.DateField()
     flag = models.CharField(max_length=20)
+    credit_limit = models.DecimalField(
+        max_digits=10, decimal_places=2,
+        validators=[MinValueValidator(0)],
+        default=0,
+        help_text='Limite de crédito do cartão'
+    )
 
     class Meta:
         verbose_name = 'Card'
@@ -142,6 +149,23 @@ class Card(models.Model):
 
     def __str__(self):
         return f'{self.number}, {self.account}'
+
+    @classmethod
+    def create_card_for_account(cls, account):
+        card_number = generate_card_number()
+        cvv = generate_cvv()
+        expiration_date = generate_expiration_date()
+
+        # Cria o novo cartão
+        new_card = cls.objects.create(
+            account=account,
+            number=card_number,
+            cvv=cvv,
+            expiration_date=expiration_date,
+            flag='Mastercard'  # ou qualquer outra lógica para definir a bandeira
+        )
+
+        return new_card
 
 
 # Model to represent transactions
