@@ -85,6 +85,48 @@ class ClientViewSet(viewsets.ModelViewSet):
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @action(detail=False, methods=['post'])
+    def request_credit_card(self, request):
+        # Obtenha o cliente autenticado
+        client = self.request.user.client
+        account = client.account
+
+        # Verifique se o cliente já possui um cartão
+        existing_card = models.Card.objects.filter(account=account).first()
+        if existing_card:
+            return Response({'error': 'O cliente já possui um cartão de crédito.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if account.balance >= 1000:
+            try:
+                new_card = models.Card.create_card_for_account(account)
+            except ValidationError as e:
+                return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Adicione a lógica para definir o limite de crédito com base no saldo da conta
+            if account.balance < 2000:
+                new_card.credit_limit = 1000
+            else:
+                new_card.credit_limit = 2000  # ou qualquer outro valor desejado
+
+            new_card.save()
+
+            # Inclua os detalhes do cartão na resposta
+            card_details = {
+                'card_number': new_card.number,
+                'cvv': new_card.cvv,
+                'expiration_date': new_card.expiration_date,
+                'flag': new_card.flag,
+                'credit_limit': new_card.credit_limit
+            }
+
+            return Response({
+                'success': 'Cartão de crédito solicitado com sucesso',
+                'card_details': card_details
+            }, status=status.HTTP_201_CREATED)
+        else:
+            return Response({'error': 'Saldo insuficiente para solicitar um cartão de crédito'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
 
 # visualiza todas as contas
 class AccountViewSet(viewsets.ReadOnlyModelViewSet):
