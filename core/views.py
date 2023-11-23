@@ -1,5 +1,6 @@
 from django.shortcuts import get_object_or_404
 from django_filters import rest_framework as filters
+from django.db import transaction
 from djoser.views import UserViewSet as DjoserUserViewSet
 from rest_framework import viewsets, status, generics, permissions
 from rest_framework.permissions import IsAuthenticated
@@ -7,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.authtoken.models import Token
 from rest_framework.exceptions import ValidationError
-
+from datetime import datetime
 from decimal import Decimal
 from .utils import calculate_loan_approval
 
@@ -275,40 +276,71 @@ class LoanViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'])
     def request_loan(self, request):
-        # Obtenha o cliente autenticado
         client = request.user.client
         account = client.account
 
-        # Obtenha os dados da solicitação de empréstimo do corpo da solicitação
-        requested_amount = request.data.get('requested_amount')
-        installments = request.data.get('installments')
-        interest_rate = request.data.get('interest_rate')
+        # obtem os dados da solicitação de empréstimo
+        requested_amount = Decimal(request.data.get('requested_amount'))  # Converta para Decimal
+        installments = int(request.data.get('installments'))  # Converta para int
 
-        # Adicione outras verificações de entrada conforme necessário
+        default_interest_rate = Decimal('0.1')  # Use uma string para evitar imprecisões de ponto flutuante
 
-        # Use a função de utils para verificar se o empréstimo é aprovado
+        # usa a função de utils para verificar se o empréstimo é aprovado
         try:
-            is_approved = calculate_loan_approval(account.balance, requested_amount, installments, interest_rate)
+            is_approved = calculate_loan_approval(account.balance, requested_amount, installments, default_interest_rate)
         except ValidationError as e:
-            # Lida com validações e retorna uma resposta de erro, se necessário
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Crie o objeto Loan se o empréstimo for aprovado
+        # cria o objeto Loan se o empréstimo for aprovado
         if is_approved:
             loan_data = {
                 'account': account.id,
                 'value': requested_amount,
-                'interest_rate': interest_rate,
+                'interest_rate': default_interest_rate,
                 'approved': True,
                 'installment_number': installments,
-                'approval_date': None  # Pode ser atualizado com a data real de aprovação
+                'approval_date': datetime.now().date(),
             }
 
-            loan_serializer = serializers.LoanSerializer(data=loan_data)
-            if loan_serializer.is_valid():
-                loan_serializer.save()
-                return Response({'success': 'Empréstimo solicitado e aprovado com sucesso'}, status=status.HTTP_201_CREATED)
-            else:
-                return Response({'error': 'Erro ao salvar o empréstimo'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            # Utilize uma transação para garantir a consistência
+            with transaction.atomic():
+                loan_serializer = serializers.LoanSerializer(data=loan_data)
+                if loan_serializer.is_valid():
+                    loan = loan_serializer.save()
+
+                    # Agora, realize um depósito na conta do cliente
+                    deposit_amount = requested_amount  # Você pode ajustar conforme necessário
+                    account.balance += deposit_amount
+                    account.save()
+
+                    # Crie uma transação para o depósito
+                    deposit_transaction_data = {
+                        'account': account.id,
+                        'type': 'Deposit',
+                        'operation': 'Loan',
+                        'balance': deposit_amount
+                    }
+
+                    deposit_transaction_serializer = serializers.TransactionSerializer(data=deposit_transaction_data)
+                    deposit_transaction_serializer.is_valid(raise_exception=True)
+                    deposit_transaction_serializer.save()
+
+                    # Inclua os detalhes do empréstimo na resposta
+                    loan_details = {
+                        'id': loan.id,
+                        'request_date': loan.request_date,
+                        'value': loan.value,
+                        'interest_rate': loan.interest_rate,
+                        'approved': loan.approved,
+                        'installment_number': loan.installment_number,
+                        'approval_date': loan.approval_date,
+                    }
+
+                    return Response({
+                        'success': 'Empréstimo solicitado e aprovado com sucesso',
+                        'loan_details': loan_details
+                    }, status=status.HTTP_201_CREATED)
+                else:
+                    return Response({'error': 'Erro ao salvar o empréstimo'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
             return Response({'error': 'Empréstimo não aprovado'}, status=status.HTTP_400_BAD_REQUEST)
