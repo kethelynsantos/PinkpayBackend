@@ -65,7 +65,7 @@ class Client(models.Model):
     address = models.ForeignKey(Address, on_delete=models.CASCADE, blank=True, null=True)
     user = models.OneToOneField(get_user_model(), on_delete=models.CASCADE, blank=True, null=True)
     name = models.CharField(max_length=100)
-    photo = models.CharField(max_length=100, null=True)
+    photo = models.ImageField(upload_to='client_photos/', null=True, blank=True)
     birth_date = models.DateField()
     phone = models.CharField(max_length=15)
     email = models.EmailField(max_length=50)
