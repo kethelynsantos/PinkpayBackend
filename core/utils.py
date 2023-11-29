@@ -34,27 +34,35 @@ def calculate_loan_approval(client_balance, requested_amount, installments, inte
     min_requested_amount = 100  # valor mínimo permitido para empréstimo
     max_installment_value_ratio = Decimal('0.2')  # limite para o valor de cada parcela
 
+    # Inicializa o dicionário de resultado
+    result = {'approved': False, 'error_message': None}
+
     # verifica se o valor solicitado e as parcelas são válidos
     if requested_amount < min_requested_amount:
-        raise ValidationError('O valor solicitado é muito baixo.')
+        result['error_message'] = 'Empréstimo não aprovado, pois o valor solicitado é muito baixo.'
+        return result
 
     if installments > max_installments:
-        raise ValidationError('Número de parcelas excede o máximo permitido.')
+        result['error_message'] = 'Empréstimo não aprovado, pois o número de parcelas excede o máximo permitido.'
+        return result
 
     # calcula o valor máximo do empréstimo com base no saldo e no múltiplo definido
     max_loan_amount = client_balance * max_loan_multiplier
 
     if requested_amount > max_loan_amount:
-        raise ValidationError('O valor solicitado excede o limite máximo permitido.')
+        result['error_message'] = 'Empréstimo não aprovado, pois o valor solicitado excede o limite máximo permitido.'
+        return result
 
     total_loan_amount = calculate_total_loan_amount(requested_amount, installments, interest_rate)
 
     # verifica se o valor de cada parcela é menor ou igual ao saldo da conta
     max_installment_value = max_installment_value_ratio * client_balance
     if requested_amount / installments <= max_installment_value:
-        return True
+        result['approved'] = True
+        return result
     else:
-        raise ValidationError('O valor de cada parcela excede o limite permitido.')
+        result['error_message'] = 'Empréstimo não aprovado, pois o valor de cada parcela excede o limite permitido.'
+        return result
 
 
 def calculate_total_loan_amount(requested_amount, installments, interest_rate):

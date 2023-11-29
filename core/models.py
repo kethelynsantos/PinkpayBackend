@@ -10,6 +10,8 @@ from django.contrib.auth.models import (
 from django.contrib.auth import get_user_model
 from .utils import generate_card_number, generate_cvv, generate_expiration_date
 from django.core.validators import MinValueValidator
+from datetime import datetime, timedelta
+import threading
 
 
 class CustomUserManager(BaseUserManager):
@@ -61,6 +63,13 @@ class Address(models.Model):
 
 # Model to represent clients
 class Client(models.Model):
+    STATUS_IN_APPROVAL = 'Em aprovação'
+    STATUS_APPROVED = 'Aprovado'
+    STATUS_CHOICES = [
+        (STATUS_IN_APPROVAL, 'Em aprovação'),
+        (STATUS_APPROVED, 'Aprovado'),
+    ]
+
     # Relationship with the Address model
     address = models.ForeignKey(Address, on_delete=models.CASCADE, blank=True, null=True)
     user = models.OneToOneField(get_user_model(), on_delete=models.CASCADE, blank=True, null=True)
@@ -69,6 +78,18 @@ class Client(models.Model):
     birth_date = models.DateField()
     phone = models.CharField(max_length=15)
     email = models.EmailField(max_length=50)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_IN_APPROVAL)
+    approval_date = models.DateTimeField(null=True, blank=True)
+
+    def schedule_action(self, action_function, delay_minutes=3, *args, **kwargs):
+        timer = threading.Timer(delay_minutes * 60, action_function, args=args, kwargs=kwargs)
+        timer.start()
+
+    def approve(self):
+        if self.status == self.STATUS_IN_APPROVAL:
+            self.status = self.STATUS_APPROVED
+            self.approval_date = datetime.now()
+            self.save()
 
     class Meta:
         verbose_name = 'Client'

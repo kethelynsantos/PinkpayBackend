@@ -53,6 +53,11 @@ class ClientViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
+
+        # agenda a aprovação após 3 minutos
+        client = serializer.instance
+        client.schedule_action(client.approve, delay_minutes=3)
+
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
     def destroy(self, request, *args, **kwargs):
@@ -121,12 +126,55 @@ class ClientViewSet(viewsets.ModelViewSet):
             }
 
             return Response({
-                'success': 'Cartão de crédito solicitado com sucesso',
+                'success': f'O limite máximo do seu cartão é de {new_card.credit_limit}. '
+                           f'Sua solicitação será  respondida em até 3 min. ',
                 'card_details': card_details
             }, status=status.HTTP_201_CREATED)
         else:
-            return Response({'error': 'Saldo insuficiente para solicitar um cartão de crédito'},
+            return Response({'error': 'Cartão não aprovado, pois o seu saldo é '
+                                      'insuficiente para solicitar um cartão de crédito'},
                             status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['post'])
+    def make_purchase(self, request):
+        # Obtenha o cliente autenticado e a conta associada
+        client = self.request.user.client
+        account = client.account
+
+        # Verifique se o cliente possui um cartão de crédito
+        card = models.Card.objects.filter(account=account).first()
+        if not card:
+            return Response({'error': 'O cliente não possui um cartão de crédito.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Obtenha o valor da transação do corpo da solicitação
+        purchase_amount = Decimal(request.data.get('amount', 0))
+
+        # Verifique se o valor da transação é válido
+        if purchase_amount <= 0:
+            return Response({'error': 'O valor da transação deve ser maior que zero.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        # Use uma transação para garantir consistência no banco de dados
+        with transaction.atomic():
+            # Crie uma transação associada ao cartão de crédito
+            transaction_data = {
+                'account': account,
+                'type': 'Purchase',
+                'operation': 'Credit',
+                'balance': purchase_amount,
+            }
+
+            transaction_serializer = serializers.TransactionSerializer(data=transaction_data)
+            if transaction_serializer.is_valid():
+                transaction_serializer.save()
+
+                # Atualize o limite de crédito do cartão
+                card.credit_limit -= purchase_amount
+                card.save()
+
+                return Response({'success': 'Compra realizada com sucesso.'}, status=status.HTTP_200_OK)
+            else:
+                return Response({'error': 'Erro ao criar a transação.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # visualiza todas as contas
@@ -283,9 +331,15 @@ class LoanViewSet(viewsets.ModelViewSet):
 
         # usa a função de utils para verificar se o empréstimo é aprovado
         try:
-            is_approved = calculate_loan_approval(account.balance, requested_amount, installments, default_interest_rate)
+            approval_result = calculate_loan_approval(account.balance, requested_amount, installments,
+                                                      default_interest_rate)
+            is_approved = approval_result['approved']
+            error_message = approval_result.get('error_message')
         except ValidationError as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not is_approved:
+            return Response({'error': error_message}, status=status.HTTP_200_OK)
 
         # cria o objeto Loan se o empréstimo for aprovado
         if is_approved:
@@ -331,10 +385,11 @@ class LoanViewSet(viewsets.ModelViewSet):
                     }
 
                     return Response({
-                        'success': 'Empréstimo solicitado e aprovado com sucesso',
+                        'success': f'O limite máximo para o seu emprétimo é de {loan.value}. '
+                                   'Sua solicitação será respondida em até 3 minutos.',
                         'loan_details': loan_details
                     }, status=status.HTTP_201_CREATED)
                 else:
                     return Response({'error': 'Erro ao salvar o empréstimo'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
-            return Response({'error': 'Empréstimo não aprovado'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Empréstimo não aprovado, pois o seu saldo é 3 vezes menor que o valor solicitado'}, status=status.HTTP_400_BAD_REQUEST)
