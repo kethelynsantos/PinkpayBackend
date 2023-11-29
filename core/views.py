@@ -82,18 +82,18 @@ class ClientViewSet(viewsets.ModelViewSet):
             user_serializer.is_valid(raise_exception=True)
             user_serializer.save()
 
-            # deslogar o usuário após a atualização da senha
+            # desloga o usuário após a atualização da senha
             Token.objects.filter(user=user_instance).delete()
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['post'])
     def request_credit_card(self, request):
-        # Obtenha o cliente autenticado
+        # obtem o cliente autenticado
         client = self.request.user.client
         account = client.account
 
-        # Verifique se o cliente já possui um cartão
+        # verifica se o cliente já possui um cartão
         existing_card = models.Card.objects.filter(account=account).first()
         if existing_card:
             return Response({'error': 'O cliente já possui um cartão de crédito.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -104,15 +104,14 @@ class ClientViewSet(viewsets.ModelViewSet):
             except ValidationError as e:
                 return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Adicione a lógica para definir o limite de crédito com base no saldo da conta
+            # adciona a lógica para definir o limite de crédito
             if account.balance < 2000:
                 new_card.credit_limit = 1000
             else:
-                new_card.credit_limit = 2000  # ou qualquer outro valor desejado
+                new_card.credit_limit = 2000
 
             new_card.save()
 
-            # Inclua os detalhes do cartão na resposta
             card_details = {
                 'card_number': new_card.number,
                 'cvv': new_card.cvv,
@@ -193,7 +192,7 @@ class CurrentBalanceView(generics.RetrieveAPIView):
         # obtem a conta associada ao cliente autenticado
         account = models.Account.objects.get(client__user=request.user)
 
-        # serialize o saldo atual
+        # serializa o saldo atual
         data = {'current_balance': str(account.balance)}
         return Response(data, status=status.HTTP_200_OK)
 
@@ -208,32 +207,29 @@ class TransferViewSet(viewsets.ViewSet):
         transfer_type = request.data.get('transfer_type', 'Pix')
 
         if transfer_amount is not None and transfer_amount > 0 and recipient_cpf:
-            # Obtenha a conta do usuário autenticado
             sender_account = get_object_or_404(models.Account, client__user=request.user)
 
             recipient_user = get_object_or_404(models.CustomUser, cpf=recipient_cpf)
             recipient_account = get_object_or_404(models.Account, client__user=recipient_user)
 
-            # Verifica se o saldo da conta do remetente é suficiente
+            # verifica se o saldo da conta do remetente é suficiente
             if sender_account.balance >= transfer_amount:
-                # Deduz o valor do saldo do remetente
                 sender_account.balance -= transfer_amount
                 sender_account.save()
 
-                # Adiciona o valor ao saldo do destinatário
+                # adiciona o valor ao saldo do destinatário
                 recipient_account.balance += transfer_amount
                 recipient_account.save()
 
-                # Determina a operação com base no tipo de transferência
+                # determina a operação com base no tipo de transferência
                 if transfer_type.lower() == 'pix':
                     operation_sender = 'Pix'
                     operation_recipient = 'Pix'
                 else:
-                    # Ajuste para incluir 'Transação'
                     operation_sender = transfer_type.capitalize()
                     operation_recipient = transfer_type.capitalize()
 
-                # Cria uma nova transação para o remetente
+                # cria uma nova transação para o remetente
                 sender_transaction_data = {
                     'account': sender_account.id,
                     'type': 'Transfer',
@@ -245,7 +241,7 @@ class TransferViewSet(viewsets.ViewSet):
                 sender_transaction_serializer.is_valid(raise_exception=True)
                 sender_transaction_serializer.save()
 
-                # Cria uma nova transação para o destinatário
+                # cria uma nova transação para o destinatário
                 recipient_transaction_data = {
                     'account': recipient_account.id,
                     'type': 'Transfer Received',
@@ -280,10 +276,10 @@ class LoanViewSet(viewsets.ModelViewSet):
         account = client.account
 
         # obtem os dados da solicitação de empréstimo
-        requested_amount = Decimal(request.data.get('requested_amount'))  # Converta para Decimal
-        installments = int(request.data.get('installments'))  # Converta para int
+        requested_amount = Decimal(request.data.get('requested_amount'))
+        installments = int(request.data.get('installments'))
 
-        default_interest_rate = Decimal('0.1')  # Use uma string para evitar imprecisões de ponto flutuante
+        default_interest_rate = Decimal('0.1')
 
         # usa a função de utils para verificar se o empréstimo é aprovado
         try:
@@ -302,18 +298,17 @@ class LoanViewSet(viewsets.ModelViewSet):
                 'approval_date': datetime.now().date(),
             }
 
-            # Utilize uma transação para garantir a consistência
             with transaction.atomic():
                 loan_serializer = serializers.LoanSerializer(data=loan_data)
                 if loan_serializer.is_valid():
                     loan = loan_serializer.save()
 
-                    # Agora, realize um depósito na conta do cliente
-                    deposit_amount = requested_amount  # Você pode ajustar conforme necessário
+                    # realiza um depósito na conta do cliente
+                    deposit_amount = requested_amount
                     account.balance += deposit_amount
                     account.save()
 
-                    # Crie uma transação para o depósito
+                    # cria uma transação para o depósito
                     deposit_transaction_data = {
                         'account': account.id,
                         'type': 'Deposit',
@@ -325,7 +320,6 @@ class LoanViewSet(viewsets.ModelViewSet):
                     deposit_transaction_serializer.is_valid(raise_exception=True)
                     deposit_transaction_serializer.save()
 
-                    # Inclua os detalhes do empréstimo na resposta
                     loan_details = {
                         'id': loan.id,
                         'request_date': loan.request_date,
