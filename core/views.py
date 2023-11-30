@@ -1,5 +1,6 @@
 from django.shortcuts import get_object_or_404
 from django_filters import rest_framework as filters
+from django_filters.rest_framework import DjangoFilterBackend
 from django.db import transaction
 from djoser.views import UserViewSet as DjoserUserViewSet
 from rest_framework import viewsets, status, generics, permissions
@@ -135,47 +136,6 @@ class ClientViewSet(viewsets.ModelViewSet):
                                       'insuficiente para solicitar um cartão de crédito'},
                             status=status.HTTP_400_BAD_REQUEST)
 
-    @action(detail=False, methods=['post'])
-    def make_purchase(self, request):
-        # Obtenha o cliente autenticado e a conta associada
-        client = self.request.user.client
-        account = client.account
-
-        # Verifique se o cliente possui um cartão de crédito
-        card = models.Card.objects.filter(account=account).first()
-        if not card:
-            return Response({'error': 'O cliente não possui um cartão de crédito.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Obtenha o valor da transação do corpo da solicitação
-        purchase_amount = Decimal(request.data.get('amount', 0))
-
-        # Verifique se o valor da transação é válido
-        if purchase_amount <= 0:
-            return Response({'error': 'O valor da transação deve ser maior que zero.'},
-                            status=status.HTTP_400_BAD_REQUEST)
-
-        # Use uma transação para garantir consistência no banco de dados
-        with transaction.atomic():
-            # Crie uma transação associada ao cartão de crédito
-            transaction_data = {
-                'account': account,
-                'type': 'Purchase',
-                'operation': 'Credit',
-                'balance': purchase_amount,
-            }
-
-            transaction_serializer = serializers.TransactionSerializer(data=transaction_data)
-            if transaction_serializer.is_valid():
-                transaction_serializer.save()
-
-                # Atualize o limite de crédito do cartão
-                card.credit_limit -= purchase_amount
-                card.save()
-
-                return Response({'success': 'Compra realizada com sucesso.'}, status=status.HTTP_200_OK)
-            else:
-                return Response({'error': 'Erro ao criar a transação.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 # visualiza todas as contas
 class AccountViewSet(viewsets.ReadOnlyModelViewSet):
@@ -219,13 +179,16 @@ class DepositViewSet(viewsets.ModelViewSet):
 
             return Response(self.get_serializer(destination_account).data, status=status.HTTP_201_CREATED)
 
-        return Response({'error': 'Valor de depósito ou conta de destino inválidos'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'Valor de depósito ou conta de destino inválidos'},
+                        status=status.HTTP_400_BAD_REQUEST)
 
 
 # lista as transações associadas ao cliente autenticado
 class TransactionListView(generics.ListAPIView):
     serializer_class = serializers.TransactionSerializer
     permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['type']
 
     def get_queryset(self):
         user = self.request.user
@@ -237,7 +200,6 @@ class CurrentBalanceView(generics.RetrieveAPIView):
     permission_classes = [IsAuthenticated]
 
     def retrieve(self, request, *args, **kwargs):
-        # obtem a conta associada ao cliente autenticado
         account = models.Account.objects.get(client__user=request.user)
 
         # serializa o saldo atual
@@ -249,7 +211,7 @@ class CurrentBalanceView(generics.RetrieveAPIView):
 class TransferViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
-    def create(self, request, *args, **kwargs):
+    def create(self, request):
         transfer_amount = Decimal(request.data.get('transfer_amount', 0))
         recipient_cpf = request.data.get('recipient_cpf')
         transfer_type = request.data.get('transfer_type', 'Pix')
@@ -303,17 +265,74 @@ class TransferViewSet(viewsets.ViewSet):
 
                 return Response({'success': 'Transferência realizada com sucesso'}, status=status.HTTP_201_CREATED)
             else:
-                return Response({'error': 'Saldo insuficiente na conta do remetente'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'error': 'Saldo insuficiente na conta do remetente'},
+                                status=status.HTTP_400_BAD_REQUEST)
 
         return Response({'error': 'Valores inválidos para a transferência'}, status=status.HTTP_400_BAD_REQUEST)
 
 
+# realiza compras no cartão de crédito
 class CardViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = models.Card.objects.all()
     serializer_class = serializers.CardSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    @action(detail=False, methods=['post'])
+    def make_credit_transaction(self, request):
+        user = request.user
+        card = models.Card.objects.filter(account__client__user=user).first()
 
+        if not card:
+            return Response({'error': 'O cliente não possui um cartão de crédito.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        account = card.account
+        transaction_amount = Decimal(request.data.get('amount', 0))
+
+        # verifica se o valor da transação é válido
+        if transaction_amount <= 0:
+            return Response({'error': 'O valor da transação deve ser maior que zero.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        # verifica se o cartão tem limite de crédito disponível
+        if card.credit_limit < transaction_amount:
+            return Response({'error': 'Limite de crédito insuficiente.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # cria uma transação de crédito associada ao cartão
+        transaction_data = {
+            'account': account.id,
+            'card': card.id,
+            'amount': transaction_amount,
+            'type': 'Credit',
+            'operation': 'Credit Transaction',
+        }
+
+        transaction_serializer = serializers.TransactionSerializer(data=transaction_data)
+        if transaction_serializer.is_valid():
+            transaction_serializer.save()
+
+            # atualiza o limite de crédito no cartão
+            card.credit_limit -= transaction_amount
+            card.save()
+
+            card_details = {
+                'card_number': card.number,
+                'cvv': card.cvv,
+                'expiration_date': card.expiration_date,
+                'flag': card.flag,
+                'credit_limit': card.credit_limit,
+            }
+
+            return Response({
+                'success': 'Transação de crédito realizada com sucesso.',
+                'card_details': card_details
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({'error': 'Erro ao criar a transação de crédito.',
+                             'details': transaction_serializer.errors},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# realiza solicitações de empréstimo
 class LoanViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.LoanSerializer
     queryset = models.Loan.objects.all()
@@ -390,6 +409,8 @@ class LoanViewSet(viewsets.ModelViewSet):
                         'loan_details': loan_details
                     }, status=status.HTTP_201_CREATED)
                 else:
-                    return Response({'error': 'Erro ao salvar o empréstimo'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                    return Response({'error': 'Erro ao salvar o empréstimo'},
+                                    status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
-            return Response({'error': 'Empréstimo não aprovado, pois o seu saldo é 3 vezes menor que o valor solicitado'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Empréstimo não aprovado, pois o seu saldo é '
+                                      '3 vezes menor que o valor solicitado'}, status=status.HTTP_400_BAD_REQUEST)

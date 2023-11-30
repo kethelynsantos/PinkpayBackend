@@ -23,6 +23,6 @@ urlpatterns = [
     path('api/v1/balance/', CurrentBalanceView.as_view(), name='current-balance'),
     path('api/v1/client/request_credit_card/', ClientViewSet.as_view({'post': 'request_credit_card'}),
          name='request_credit_card'),
-    path('api/v1/client/make_purchase/', ClientViewSet.as_view({'post': 'make_purchase'}),
-         name='make_purchase'),
+    path('api/v1/cards/make_credit_transaction/', CardViewSet.as_view({'post': 'make_credit_transaction'}),
+         name='make_credit_transaction'),
 ]

@@ -10,7 +10,7 @@ from django.contrib.auth.models import (
 from django.contrib.auth import get_user_model
 from .utils import generate_card_number, generate_cvv, generate_expiration_date
 from django.core.validators import MinValueValidator
-from datetime import datetime, timedelta
+from datetime import datetime
 import threading
 
 
@@ -47,6 +47,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
 # Model to represent addresses
 class Address(models.Model):
+    objects = None
     street = models.CharField(max_length=100)
     neighborhood = models.CharField(max_length=75)
     city = models.CharField(max_length=75)
@@ -101,6 +102,7 @@ class Client(models.Model):
 
 # Model to represent accounts
 class Account(models.Model):
+    objects = None
     client = models.OneToOneField(Client, on_delete=models.CASCADE)
     agency = models.CharField(max_length=10, default='0000')
     number = models.CharField(max_length=25)
@@ -152,6 +154,7 @@ class Loan(models.Model):
 
 # Model to represent cards
 class Card(models.Model):
+    objects = None
     account = models.ForeignKey(Account, on_delete=models.CASCADE, related_name='cards')
     number = models.CharField(max_length=30, unique=True)
     cvv = models.CharField(max_length=5)

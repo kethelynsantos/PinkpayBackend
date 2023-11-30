@@ -1,7 +1,6 @@
 import random
 from datetime import timedelta
 from django.utils import timezone
-from django.core.exceptions import ValidationError
 from decimal import Decimal, ROUND_DOWN
 from core import models
 
@@ -34,7 +33,7 @@ def calculate_loan_approval(client_balance, requested_amount, installments, inte
     min_requested_amount = 100  # valor mínimo permitido para empréstimo
     max_installment_value_ratio = Decimal('0.2')  # limite para o valor de cada parcela
 
-    # Inicializa o dicionário de resultado
+    # dicionário de resultado
     result = {'approved': False, 'error_message': None}
 
     # verifica se o valor solicitado e as parcelas são válidos
