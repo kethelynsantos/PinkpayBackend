@@ -3,7 +3,7 @@ from django.urls import path, include
 from rest_framework.routers import SimpleRouter
 from .views import (
     CustomUserViewSet, ClientViewSet, AddressViewSet, AccountViewSet, DepositViewSet,
-    TransactionListView, CurrentBalanceView, TransferViewSet, CardViewSet, LoanViewSet
+    TransactionListView, CurrentBalanceView, TransferViewSet, CardViewSet, LoanViewSet, CurrentClientView
 )
 
 router = SimpleRouter()
@@ -18,6 +18,7 @@ router.register('loan', LoanViewSet, basename='loan')
 
 urlpatterns = [
     path('api/v1/', include(router.urls)),
+    path('api/v1/current-client/', CurrentClientView.as_view(), name='current-client'),
     path('api/v1/auth/register/', ClientViewSet.as_view({'post': 'register'}), name='create_user'),
     path('api/v1/transactions/', TransactionListView.as_view(), name='transaction-list'),
     path('api/v1/balance/', CurrentBalanceView.as_view(), name='current-balance'),

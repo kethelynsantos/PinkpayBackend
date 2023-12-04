@@ -13,7 +13,19 @@ from datetime import datetime
 from decimal import Decimal
 from .utils import calculate_loan_approval
 
+from rest_framework.generics import RetrieveAPIView
+
 from core import serializers, models
+
+
+class CurrentClientView(RetrieveAPIView):
+    serializer_class = serializers.ClientSerializer
+    permission_classes = [IsAuthenticated]
+
+    def retrieve(self, request, *args, **kwargs):
+        client = self.request.user.client
+        serializer = self.get_serializer(client)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 # gerencia endereços associados a clientes
