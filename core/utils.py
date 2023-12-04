@@ -10,7 +10,7 @@ def generate_card_number():
 
     while True:
         # gera um número de cartão aleatório de 16 dígitos
-        new_card_number = ''.join(random.choices('0123456789', k=16))
+        new_card_number = ''.join(random.choices('0123456789', k=5))
 
         # verifica se o número do cartão é único
         if new_card_number not in existing_card_numbers:

@@ -1,6 +1,8 @@
-# core/urls.py
 from django.urls import path, include
 from rest_framework.routers import SimpleRouter
+from django.conf import settings
+from django.conf.urls.static import static
+
 from .views import (
     CustomUserViewSet, ClientViewSet, AddressViewSet, AccountViewSet, DepositViewSet,
     TransactionListView, CurrentBalanceView, TransferViewSet, CardViewSet, LoanViewSet, CurrentClientView
@@ -27,3 +29,5 @@ urlpatterns = [
     path('api/v1/cards/make_credit_transaction/', CardViewSet.as_view({'post': 'make_credit_transaction'}),
          name='make_credit_transaction'),
 ]
+
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
