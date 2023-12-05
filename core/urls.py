@@ -3,7 +3,8 @@ from django.urls import path, include
 from rest_framework.routers import SimpleRouter
 from .views import (
     CustomUserViewSet, ClientViewSet, AddressViewSet, AccountViewSet, DepositViewSet,
-    TransactionListView, CurrentBalanceView, TransferViewSet, CardViewSet, LoanViewSet, CurrentClientView
+    TransactionListView, CurrentBalanceView, TransferViewSet, CardViewSet, LoanViewSet, CurrentClientView,
+    current_user_credit_card,
 )
 
 router = SimpleRouter()
@@ -26,4 +27,5 @@ urlpatterns = [
          name='request_credit_card'),
     path('api/v1/cards/make_credit_transaction/', CardViewSet.as_view({'post': 'make_credit_transaction'}),
          name='make_credit_transaction'),
+    path('api/v1/current_user_credit_card/', current_user_credit_card, name='current_user_credit_card'),
 ]

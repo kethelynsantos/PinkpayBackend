@@ -12,10 +12,31 @@ from rest_framework.exceptions import ValidationError
 from datetime import datetime
 from decimal import Decimal
 from .utils import calculate_loan_approval
+from rest_framework.decorators import api_view, permission_classes
 
 from rest_framework.generics import RetrieveAPIView
 
 from core import serializers, models
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def current_user_credit_card(request):
+    try:
+        # Obtém o cliente associado ao usuário autenticado
+        client = request.user.client
+
+        # Obtém o cartão de crédito associado ao cliente, se existir
+        card = models.Card.objects.filter(account__client=client).first()
+
+        if card:
+            serializer = serializers.CardSerializer(card)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response({'error': 'O cliente não possui um cartão de crédito.'}, status=status.HTTP_404_NOT_FOUND)
+
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class CurrentClientView(RetrieveAPIView):

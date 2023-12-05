@@ -65,6 +65,18 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:19006",
 ]
 
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
 ROOT_URLCONF = 'fastbank.urls'
 
 TEMPLATES = [
